@@ -14,7 +14,6 @@ def get_user(message: types.Message):
         user_link = f"[{id}]\nСообщение от <a href='tg://user?id={id}'>{full_name}</a>\n"
     return user_link
 
-
 def new_offer_keyboard():
     keyboard = types.InlineKeyboardMarkup()
     publish = types.InlineKeyboardButton(
@@ -80,9 +79,26 @@ def user_link(obj):
         text = f"<a href='tg://user?id={obj.id}'>{obj.full_name}</a>"
     return text
 
-
 def responses_data(objs):
     responses = []
     for obj in objs:
         responses.append(f"{user_link(obj[0])}\n")
     return ''.join(responses)
+
+def new_media_keyboard():
+    keyboard = types.InlineKeyboardMarkup()
+    publish = types.InlineKeyboardButton(
+        text="Отправить в группу",
+        callback_data="media_publish"
+    )
+    keyboard.insert(publish)
+    return keyboard
+
+def published_media_keyboard(message_id):
+    keyboard = types.InlineKeyboardMarkup()
+    publish = types.InlineKeyboardButton(
+        text="Удалить из группы",
+        callback_data=f"media_delete {message_id}"
+    )
+    keyboard.insert(publish)
+    return keyboard

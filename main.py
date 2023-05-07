@@ -11,6 +11,8 @@ from functions import (
     add_response, 
     id_and_text,
     responses_data,
+    new_media_keyboard,
+    published_media_keyboard
 )
 from models import UserModel, OfferModel, ResponseModel, CommentModel, session
 
@@ -20,9 +22,11 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
 
+# TODO: caption is required for photo and video
+
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
-    return await message.answer("В сообщении следует указать:\n - Вид работы\n - Адрес\n - Готов заплатить\n - Дополнительно\nОбратившись к нам мы максимально постараемся вам помочь в вашем деле!")
+    return await message.answer("В сообщении следует указать:\n - Вид работы\n - Адрес\n - Готов заплатить\n - Фото или видео\n - Дополнительно\nОбратившись к нам мы максимально постараемся вам помочь в вашем деле!")
 
 
 @dp.message_handler(commands=['chatid'])
@@ -239,6 +243,66 @@ async def process_respond(query: types.CallbackQuery):
         chat_id=OWNER, 
         reply_markup=published_offer_keyboard()
     )
+
+
+@dp.callback_query_handler(lambda query: query.data == 'media_publish')
+async def process_media_publish(query: types.CallbackQuery):
+    message_id = query.message.message_id
+    # send new media to group
+    if query.message.photo:
+        file_id = query.message.photo[-1].file_id
+        media_post = await bot.send_photo(
+            chat_id=GROUP, 
+            photo=file_id,
+            caption=query.message.caption
+        )
+    if query.message.video:
+        file_id = query.message.video.file_id
+        media_post = await bot.send_video(
+            chat_id=GROUP, 
+            video=file_id,
+            caption=query.message.caption
+        )
+    # change publish button to close button
+    await bot.edit_message_reply_markup(
+        chat_id=OWNER, 
+        message_id=message_id, 
+        reply_markup=published_media_keyboard(media_post.message_id)
+    )
+    await query.answer("Успешно отправлено", show_alert=True)
+
+
+@dp.callback_query_handler(lambda query: query.data.startswith(('media_delete')))
+async def process_media_delete(query: types.CallbackQuery):
+    _, message_id = query.data.split()
+    # delete media from group
+    await bot.delete_message(chat_id=GROUP, message_id=int(message_id))
+    # change publish button to close button
+    await bot.edit_message_reply_markup(
+        chat_id=OWNER, 
+        message_id=query.message.message_id, 
+        reply_markup=new_media_keyboard()
+    )
+    await query.answer("Удалено из группы", show_alert=True)
+
+
+@dp.message_handler(content_types=[
+    types.ContentType.PHOTO, 
+    types.ContentType.VIDEO, 
+    # types.ContentType.VIDEO_NOTE, 
+    # types.ContentType.VOICE, 
+    # types.ContentType.DOCUMENT, 
+    # types.ContentType.AUDIO
+    ]
+)
+async def handle_media(message: types.Message):
+    customer_id = message.from_user.id
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        await bot.send_photo(chat_id=OWNER, photo=file_id, caption=message.caption, reply_markup=new_media_keyboard())
+    if message.video:
+        file_id = message.video.file_id
+        await bot.send_video(chat_id=OWNER, video=file_id, caption=message.caption, reply_markup=new_media_keyboard())
 
 
 if __name__ == "__main__":
