@@ -1,0 +1,15 @@
+[Unit]
+Description=Supportbot for Telegram
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/fidmargai/test_webhook_heroku/
+ExecStart=/usr/bin/python3 -m main
+KillMode=process
+Restart=always
+RestartSec=10
+EnvironmentFile=/home/fidmargai/test_webhook_heroku/.env
+
+[Install]
+WantedBy=multi-user.target
